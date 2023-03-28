@@ -23,6 +23,7 @@
 #include "iree/tooling/instrument_util.h"
 #include "iree/tooling/vm_util.h"
 #include "iree/vm/api.h"
+#include "iree/modules/hal/module.h"
 
 IREE_FLAG(string, function, "",
           "Name of a function contained in the module specified by --module= "
@@ -85,6 +86,9 @@ IREE_FLAG(int32_t, output_max_element_count, 1024,
           "Prints up to the maximum number of elements of output tensors, "
           "eliding the remainder.");
 
+IREE_FLAG(string, ptxas_path, "", "Use ptxas compiler from the given path");
+IREE_FLAG(string, ptxas_params, "", "Parameter to pass ptxas compiler");
+
 namespace iree {
 namespace {
 
@@ -99,6 +103,17 @@ iree_status_t Run(int* out_exit_code) {
   vm::ref<iree_vm_module_t> main_module;
   IREE_RETURN_IF_ERROR(iree_tooling_load_module_from_flags(
       instance.get(), host_allocator, &main_module));
+  
+  std::string ptxas_path = std::string(FLAG_ptxas_path);  
+  std::string ptxas_params = std::string(FLAG_ptxas_params);  
+  if(!ptxas_path.empty()) {
+    if(ptxas_params.empty()) {
+      return iree_make_status(IREE_STATUS_INVALID_ARGUMENT,
+                            "no --ptxas_params= specified");
+    }
+    ptxas_path += " " + ptxas_params;    
+    iree_hal_set_ptxas_compiler(ptxas_path.c_str());
+  }
 
   vm::ref<iree_vm_context_t> context;
   vm::ref<iree_hal_device_t> device;

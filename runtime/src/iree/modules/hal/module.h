@@ -39,6 +39,12 @@ IREE_API_EXPORT iree_status_t iree_hal_module_create(
 IREE_API_EXPORT iree_hal_device_t* iree_hal_module_state_device(
     iree_vm_module_state_t* module_state);
 
+// Set ptxas compiler path 
+void iree_hal_set_ptxas_compiler(const char* ptxas_path);
+
+// Return the path of ptxas compiler if it is set
+const char* iree_hal_get_ptxas_compiler();
+
 #ifdef __cplusplus
 }  // extern "C"
 #endif  // __cplusplus

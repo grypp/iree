@@ -77,6 +77,39 @@ iree_status_t iree_hal_cuda_native_executable_create(
     }
   });
 
+  char *cubin_image = 0;
+  if(executable_params->ptxas_command) {
+    char* ptxas_commandline = " /tmp/iree-generated.ptx -o /tmp/iree-generated.cubin";
+    size_t ptxas_command_len = strlen(executable_params->ptxas_command);
+    size_t ptxas_commandline_len = strlen(ptxas_commandline);
+    
+    char *command = (char*) malloc(ptxas_command_len + ptxas_commandline_len);
+    command[0] = '\0';
+    strcpy(command, executable_params->ptxas_command);
+    strncat(command, ptxas_commandline, ptxas_commandline_len);
+
+    /* Compile PTX using ptxas compiler */
+    FILE *fp  = fopen ("/tmp/iree-generated.ptx", "w+");
+    fprintf(fp, "%s", ptx_image);
+    fclose (fp);
+    system(command);
+    free(command);
+
+    /* Read the generated cubin file */
+    FILE * f = fopen ("/tmp/iree-generated.cubin", "rb");    
+    long length = 0;
+    if (f) {
+      fseek (f, 0, SEEK_END);
+      length = ftell (f);
+      fseek (f, 0, SEEK_SET);
+      cubin_image = malloc (length);
+      if (cubin_image) {
+        fread (cubin_image, 1, length, f);
+      }
+      fclose (f);
+    }
+  }
+
   // Create the kernel module.
   iree_host_size_t total_size =
       sizeof(*executable) +
@@ -93,12 +126,21 @@ iree_status_t iree_hal_cuda_native_executable_create(
                                  &executable->resource);
     executable->context = context;
 
-    // Load the PTX image - this will fail if the device cannot handle the
-    // contents. We could check this prior to creating
-    status = CU_RESULT_TO_STATUS(
-        context->syms,
-        cuModuleLoadDataEx(&executable->module, ptx_image, 0, NULL, NULL),
-        "cuModuleLoadDataEx");
+    if(cubin_image) {
+      /* The PTX is already compiled here, so load the cubin into the module */
+      status = CU_RESULT_TO_STATUS(
+          context->syms,
+          cuModuleLoadData(&executable->module, cubin_image, 0),
+          "cuModuleLoadData");
+      free(cubin_image);
+    } else { 
+      // Load the PTX image - this will fail if the device cannot handle the
+      // contents. We could check this prior to creating
+      status = CU_RESULT_TO_STATUS(
+          context->syms,
+          cuModuleLoadDataEx(&executable->module, ptx_image, 0, NULL, NULL),
+          "cuModuleLoadDataEx");
+    }
   }
 
   if (iree_status_is_ok(status)) {

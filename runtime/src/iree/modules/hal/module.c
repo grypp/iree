@@ -1066,6 +1066,7 @@ IREE_VM_ABI_EXPORT(iree_hal_module_executable_create,  //
     executable_params.pipeline_layouts = pipeline_layouts;
     executable_params.constant_count = constant_count;
     executable_params.constants = constants;
+    executable_params.ptxas_command = iree_hal_get_ptxas_compiler();     
     status = iree_hal_executable_cache_prepare_executable(
         state->executable_cache, &executable_params, &executable);
   }
@@ -1479,3 +1480,12 @@ IREE_API_EXPORT iree_hal_device_t* iree_hal_module_state_device(
   iree_hal_module_state_t* state = (iree_hal_module_state_t*)module_state;
   return state->shared_device;
 }
+
+static const char* _ptxas_command = 0;
+// Set ptxas compiler path 
+void iree_hal_set_ptxas_compiler(const char* ptxas_command) {
+  _ptxas_command = ptxas_command;
+}
+
+// Return the path of ptxas compiler if it is set
+const char* iree_hal_get_ptxas_compiler() { return _ptxas_command; }

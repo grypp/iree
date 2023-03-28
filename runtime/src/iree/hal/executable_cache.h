@@ -114,6 +114,10 @@ typedef struct iree_hal_executable_params_t {
   // immediately (via CUDA PTX linking, etc).
   iree_host_size_t constant_count;
   const uint32_t* constants;
+
+  // Executable path of ptxas compiler and command line arguments
+  const char* ptxas_command;
+
 } iree_hal_executable_params_t;
 
 // Initializes |out_executable_params| to the default values for normal
